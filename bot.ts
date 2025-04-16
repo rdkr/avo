@@ -16,7 +16,7 @@ client.on(Events.ClientReady, (readyClient) => {
 });
 
 // Get next 12 quarter-hour slots in 24h format
-function getNextQuarterHours(count = 12): { label: string; value: string }[] {
+function getNextQuarterHours(count = 24): { label: string; value: string }[] {
 	const now = new Date();
 	const minutes = now.getMinutes();
 	const nextQuarter = Math.ceil(minutes / 15) * 15;
@@ -54,7 +54,7 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	);
 
 	await interaction.reply({
-		content: "cs?",
+		content: "<@&1340781340257423430> ?",
 		components: [row],
 		fetchReply: true,
 	});
