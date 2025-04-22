@@ -46,7 +46,7 @@ function getNextQuarterHours(count = 24): { label: string; value: string }[] {
 async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("time_select")
-		.setPlaceholder("pick a time")
+		.setPlaceholder("Pick a time")
 		.addOptions(getNextQuarterHours());
 
 	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
@@ -54,10 +54,33 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	);
 
 	await interaction.reply({
-		content: "<@&1340781340257423430> ?",
+		content: "<@&1340781340257423430> <:cs_avo:1357493508478599209> :pistol:?",
 		components: [row],
 		fetchReply: true,
 	});
+}
+
+const emojiMap: Record<string, string[]> = {
+	"big.jon.": ["<:jonface:770936094632050708>","<:gobblein:1017088712959606896>"],
+	"emu76": ["<:peterface:775408823233019955>", "<:henry:1055164031922622574>"],
+	"fuzzyhunter": ["<:jovahkiin:1364365971514593323>", "<:mlady:1067548480022777896>"],
+	"htidcam": ["<:camcrime:951976875733954570>", "<:oldercam:932742587385794571>"],
+	"l.i.aam": ["<:liamface:768503469988118568>", "<:liam_flame_shirt:1364373236275482624>"],
+	"radhakr": ["<:neel:951976485290389534>", "<:neelbutwhy:1016269602285695027>"],
+	"raidhas": ["<:raidpanik:1017087860161118339>", "<:raiddraft:986038165368352769>"],
+	"sam.hockley": ["<:samface:680161037990887441>", "<:samface2:1063634161065283634>"],
+	"smokinggekko": ["<:govsmile:782352151585357864>", "<:govface:554808692466515968>"]
+}
+
+function getEmojiForUser(user :string ){
+	const fallbackEmoji = ":pistol:"
+	const emojis = emojiMap[user];
+
+	if (!emojis || emojis.length === 0) {
+	  return fallbackEmoji
+	}
+	const randomIndex = Math.floor(Math.random() * emojis.length);
+	return emojis[randomIndex];
 }
 
 function getNewContent(interaction: Interaction) {
@@ -93,7 +116,7 @@ function getNewContent(interaction: Interaction) {
 	// Rebuild the message content
 	const updatedLines = Array.from(selections.entries())
 		.sort(([a], [b]) => a.localeCompare(b))
-		.map(([user, time]) => `**${user}** selected: ${time}`);
+		.map(([user, time]) => `${getEmojiForUser(user)} **${user}** selected: ${time}`);
 
 	const newContent = [title, ...updatedLines].join("\n");
 
@@ -112,7 +135,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 	) {
 		const { originalMessage, newContent } = getNewContent(interaction);
 		await originalMessage.edit({ content: newContent });
-		await interaction.deferUpdate(); // Silently acknowledge
+		await interaction.deferUpdate(); // Silently acknowledge (tip fedora)
 	}
 });
 
