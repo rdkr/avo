@@ -1,4 +1,5 @@
 export const avoResponses = [
+    "Una cum proposito",
     "Five ripe units, one spicy mission",
     "Our teamwork is smoother than fresh guac at brunch",
     "Guac hard or guac home",
