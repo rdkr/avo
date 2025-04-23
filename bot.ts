@@ -47,7 +47,7 @@ function getNextQuarterHours(count = 24): { label: string; value: string }[] {
 async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("time_select")
-		.setPlaceholder("Pick a time")
+		.setPlaceholder("pick a time")
 		.addOptions(getNextQuarterHours());
 
 	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
