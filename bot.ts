@@ -6,6 +6,7 @@ import {
 	GatewayIntentBits,
 	StringSelectMenuBuilder,
 } from "discord.js";
+import { avoResponses } from "./avo-responses";
 
 import type { Interaction } from "discord.js";
 
@@ -61,7 +62,7 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 }
 
 const emojiMap: Record<string, string[]> = {
-	"big.jon.": ["<:jonface:770936094632050708>","<:gobblein:1017088712959606896>"],
+	"big.jon.": ["<:jonface:770936094632050708>", "<:gobblein:1017088712959606896>"],
 	"emu76": ["<:peterface:775408823233019955>", "<:henry:1055164031922622574>"],
 	"fuzzyhunter": ["<:jovahkiin:1364365971514593323>", "<:mlady:1067548480022777896>"],
 	"htidcam": ["<:camcrime:951976875733954570>", "<:oldercam:932742587385794571>"],
@@ -72,12 +73,12 @@ const emojiMap: Record<string, string[]> = {
 	"smokinggekko": ["<:govsmile:782352151585357864>", "<:govface:554808692466515968>"]
 }
 
-function getEmojiForUser(user :string ){
+function getEmojiForUser(user: string) {
 	const fallbackEmoji = ":pistol:"
 	const emojis = emojiMap[user];
 
 	if (!emojis || emojis.length === 0) {
-	  return fallbackEmoji
+		return fallbackEmoji
 	}
 	const randomIndex = Math.floor(Math.random() * emojis.length);
 	return emojis[randomIndex];
@@ -114,12 +115,35 @@ function getNewContent(interaction: Interaction) {
 	selections.set(username, formatted);
 
 	// Rebuild the message content
-	const updatedLines = Array.from(selections.entries())
-		.sort(([a], [b]) => a.localeCompare(b))
-		.map(([user, time]) => `${getEmojiForUser(user)} **${user}** selected: ${time}`);
+	const sortedSelections = Array.from(selections.entries())
+		.sort(([a, timeA], [b, timeB]) => {
+			const [hoursA, minutesA] = timeA.split(":").map(Number);
+			const [hoursB, minutesB] = timeB.split(":").map(Number);
+			const dateA = new Date();
+			const dateB = new Date();
 
+			dateA.setHours(hoursA, minutesA);
+			dateB.setHours(hoursB, minutesB);
+
+			return dateA.getTime() - dateB.getTime(); // Compare times
+		})
+
+	const updatedLines = sortedSelections
+		.map(([user, time]) => `${getEmojiForUser(user)} **${user}** selected: ${time}`);
 	const newContent = [title, ...updatedLines].join("\n");
 
+
+	// Messages to send when we have 5 players
+	if (selections.size === 5) {
+		interaction.channel?.send({
+			content: `Earliest time for players: ${sortedSelections.pop()?.[1]} `
+		});
+
+		const randomResponse = avoResponses[Math.floor(Math.random() * avoResponses.length)];
+		interaction.channel?.send({
+			content: randomResponse,
+		});
+	}
 	return { originalMessage, newContent };
 }
 
