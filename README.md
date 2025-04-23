@@ -12,4 +12,10 @@ To run:
 bun run bot.ts
 ```
 
+To format:
+
+```bash
+bun run biome format
+```
+
 This project was created using `bun init` in bun v1.2.9. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

@@ -30,6 +30,7 @@ COPY . .
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/bot.ts .
+COPY --from=prerelease /usr/src/app/avo-responses.ts .
 COPY --from=prerelease /usr/src/app/package.json .
 
 # run the app
