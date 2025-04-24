@@ -105,7 +105,7 @@ function getNewContent(interaction: Interaction) {
 	// Parse into map of username -> time
 	const selections = new Map<string, string>();
 	for (const line of entries) {
-		const match = line.match(/^\*\*(.+?)\*\* selected: (\d{2}:\d{2})$/);
+		const match = line.match(/^(?::[\w-]+:|<:[\w-]+:\d+>)?\s*\*\*(.+?)\*\* selected: (\d{2}:\d{2})$/);
 		if (match) {
 			selections.set(match[1], match[2]);
 		}
@@ -136,12 +136,12 @@ function getNewContent(interaction: Interaction) {
 	// Messages to send when we have 5 players
 	if (selections.size === 5) {
 		interaction.channel?.send({
-			content: `Earliest time for players: ${sortedSelections.pop()?.[1]} `
+			content: `:alarm_clock: Earliest time for players: **${sortedSelections.pop()?.[1]}** `
 		});
 
 		const randomResponse = avoResponses[Math.floor(Math.random() * avoResponses.length)];
 		interaction.channel?.send({
-			content: randomResponse,
+			content: `<:cs_avo:1357493508478599209>: "${randomResponse}"`,
 		});
 	}
 	return { originalMessage, newContent };
