@@ -105,7 +105,7 @@ function getNewContent(interaction: Interaction) {
 	// Parse into map of username -> time
 	const selections = new Map<string, string>();
 	for (const line of entries) {
-		const match = line.match(/^(?::[\w-]+:|<:[\w-]+:\d+>)?\s*\*\*(.+?)\*\* selected: (\d{2}:\d{2})$/);
+		const match = line.match(/.*\*\*(.+?)\*\* selected: (\d{2}:\d{2})$/)
 		if (match) {
 			selections.set(match[1], match[2]);
 		}
