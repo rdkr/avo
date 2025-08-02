@@ -10,14 +10,10 @@ import {
 import type { Interaction } from "discord.js";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
 const group = "1401187418182516959"; // test
 // const group = "1401187418182516959"; // cs
 
-client.on(Events.ClientReady, (readyClient) => {
-	console.log(`Logged in as ${readyClient.user.tag}!`);
-});
-
-// Get next 12 quarter-hour slots in 24h format
 function getNextQuarterHours(count = 24): { label: string; value: string }[] {
 	const now = new Date();
 	const minutes = now.getMinutes();
@@ -44,7 +40,6 @@ function getNextQuarterHours(count = 24): { label: string; value: string }[] {
 	return options;
 }
 
-// Send the select menu
 async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("time_select")
@@ -62,36 +57,27 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 }
 
 function getPairsFromContent(content: string): Map<string, string> {
-	const match = content.match(/\[\?\]\(https:\/\/avo\.internal\/(.*)\)/);
-	const hyperlinkPairs = match && match[1] ? match[1].split("/") : [];
-
-	const selections = new Map<string, string>();
-	for (const pair of hyperlinkPairs) {
-		const [userId, time] = pair.split(";");
-		selections.set(userId, time);
+	const pairs = new Map<string, string>();
+	const lines = content.split("\n");
+	for (const line of lines) {
+		const match = line.match(/^<@(\d+)> selected: (\d{2}:\d{2})$/);
+		if (!match) continue;
+		pairs.set(match[1], match[2]);
 	}
-	return selections;
+	return pairs;
 }
 
-function getContentFromPairs(selections: Map<string, string>) {
-	const encodedPairs = Array.from(selections.entries())
-		.map(([userId, time]) => `${userId};${time}`)
-		.join("/");
-	const updatedLink = `[?](https://avo.internal/${encodedPairs})`;
-
-	const updatedLines = Array.from(selections.entries())
+function getContentFromPairs(pairs: Map<string, string>) {
+	const updatedLines = Array.from(pairs.entries())
 		.map(([userId, time]) => `<@${userId}> selected: ${time}`);
-
-	const newContent = [`<@&${group}> ${updatedLink}`, ...updatedLines].join("\n");
-	return newContent;
+	return [`<@&${group}>`, ...updatedLines].join("\n");
 }
 
 function getContent(interaction: Interaction) {
-
+	
 	const originalMessage = interaction.message;
 	const existingContent = originalMessage.content;
-
-	const selections = getPairsFromContent(existingContent);
+	const pairs = getPairsFromContent(existingContent);
 
 	const userId = interaction.user.id;
 	const selectedTime = new Date(interaction.values[0]);
@@ -100,16 +86,16 @@ function getContent(interaction: Interaction) {
 		minute: "2-digit",
 		hour12: false,
 	});
-	
-	// Update or add this user's selection
-	selections.set(userId, time);
 
-	const newContent = getContentFromPairs(selections);
+	pairs.set(userId, time);
 
-	return { originalMessage, newContent };
+	return { originalMessage, newContent: getContentFromPairs(pairs) };
 }
 
-// Handle interactions
+client.on(Events.ClientReady, (readyClient) => {
+	console.log(`Logged in as ${readyClient.user.tag}!`);
+});
+
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 	if (interaction.isChatInputCommand()) {
 		if (interaction.commandName === "avo") {
