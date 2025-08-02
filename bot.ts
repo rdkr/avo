@@ -10,6 +10,8 @@ import {
 import type { Interaction } from "discord.js";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const group = "1401187418182516959"; // test
+// const group = "1401187418182516959"; // cs
 
 client.on(Events.ClientReady, (readyClient) => {
 	console.log(`Logged in as ${readyClient.user.tag}!`);
@@ -52,50 +54,57 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 		selectMenu,
 	);
-
 	await interaction.reply({
-		content: "<@&1340781340257423430> ?",
+		content: getContentFromPairs(new Map()),
 		components: [row],
-		fetchReply: true,
+		allowedMentions: { roles: [group] },
 	});
 }
 
-function getNewContent(interaction: Interaction) {
+function getPairsFromContent(content: string): Map<string, string> {
+	const match = content.match(/\[\?\]\(https:\/\/avo\.internal\/(.*)\)/);
+	const hyperlinkPairs = match && match[1] ? match[1].split("/") : [];
+
+	const selections = new Map<string, string>();
+	for (const pair of hyperlinkPairs) {
+		const [userId, time] = pair.split(";");
+		selections.set(userId, time);
+	}
+	return selections;
+}
+
+function getContentFromPairs(selections: Map<string, string>) {
+	const encodedPairs = Array.from(selections.entries())
+		.map(([userId, time]) => `${userId};${time}`)
+		.join("/");
+	const updatedLink = `[?](https://avo.internal/${encodedPairs})`;
+
+	const updatedLines = Array.from(selections.entries())
+		.map(([userId, time]) => `<@${userId}> selected: ${time}`);
+
+	const newContent = [`<@&${group}> ${updatedLink}`, ...updatedLines].join("\n");
+	return newContent;
+}
+
+function getContent(interaction: Interaction) {
+
+	const originalMessage = interaction.message;
+	const existingContent = originalMessage.content;
+
+	const selections = getPairsFromContent(existingContent);
+
+	const userId = interaction.user.id;
 	const selectedTime = new Date(interaction.values[0]);
-	const formatted = selectedTime.toLocaleTimeString([], {
+	const time = selectedTime.toLocaleTimeString([], {
 		hour: "2-digit",
 		minute: "2-digit",
 		hour12: false,
 	});
-
-	const username = interaction.user.username;
-	const originalMessage = interaction.message;
-	const existingContent = originalMessage.content;
-
-	const lines = existingContent.split("\n");
-
-	// First line is the prompt, remaining lines are user selections
-	const title = lines[0];
-	const entries = lines.slice(1);
-
-	// Parse into map of username -> time
-	const selections = new Map<string, string>();
-	for (const line of entries) {
-		const match = line.match(/^\*\*(.+?)\*\* selected: (\d{2}:\d{2})$/);
-		if (match) {
-			selections.set(match[1], match[2]);
-		}
-	}
-
+	
 	// Update or add this user's selection
-	selections.set(username, formatted);
+	selections.set(userId, time);
 
-	// Rebuild the message content
-	const updatedLines = Array.from(selections.entries())
-		.sort(([a], [b]) => a.localeCompare(b))
-		.map(([user, time]) => `**${user}** selected: ${time}`);
-
-	const newContent = [title, ...updatedLines].join("\n");
+	const newContent = getContentFromPairs(selections);
 
 	return { originalMessage, newContent };
 }
@@ -110,7 +119,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 		interaction.isStringSelectMenu() &&
 		interaction.customId === "time_select"
 	) {
-		const { originalMessage, newContent } = getNewContent(interaction);
+		const { originalMessage, newContent } = getContent(interaction);
 		await originalMessage.edit({ content: newContent });
 		await interaction.deferUpdate(); // Silently acknowledge
 	}
