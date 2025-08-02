@@ -11,8 +11,8 @@ import type { Interaction } from "discord.js";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-const group = "1401187418182516959"; // test
-// const group = "1401187418182516959"; // cs
+// const group = "1401187418182516959"; // test
+const group = "1340781340257423430"; // cs
 
 function getNextQuarterHours(count = 24): { label: string; value: string }[] {
 	const now = new Date();
@@ -52,7 +52,7 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	await interaction.reply({
 		content: getContentFromPairs(new Map()),
 		components: [row],
-		allowedMentions: { roles: [group] },
+		allowedMentions: { parse: ["roles"] },
 	});
 }
 
@@ -68,13 +68,13 @@ function getPairsFromContent(content: string): Map<string, string> {
 }
 
 function getContentFromPairs(pairs: Map<string, string>) {
-	const updatedLines = Array.from(pairs.entries())
-		.map(([userId, time]) => `<@${userId}> selected: ${time}`);
-	return [`<@&${group}>`, ...updatedLines].join("\n");
+	const updatedLines = Array.from(pairs.entries()).map(
+		([userId, time]) => `<@${userId}> selected: ${time}`,
+	);
+	return [`<@&${group}> ?`, ...updatedLines].join("\n");
 }
 
 function getContent(interaction: Interaction) {
-	
 	const originalMessage = interaction.message;
 	const existingContent = originalMessage.content;
 	const pairs = getPairsFromContent(existingContent);
@@ -88,6 +88,17 @@ function getContent(interaction: Interaction) {
 	});
 
 	pairs.set(userId, time);
+
+	if (pairs.size >= 5 && interaction.channel) {
+		const userTags = Array.from(pairs.keys())
+			.map((id) => `<@${id}>`)
+			.join(",");
+		const latestTime = Array.from(pairs.values()).sort().slice(-1)[0];
+		interaction.channel.send({
+			content: `${userTags} @ ${latestTime} :avocado:`,
+			allowedMentions: { parse: ["users"] },
+		});
+	}
 
 	return { originalMessage, newContent: getContentFromPairs(pairs) };
 }
