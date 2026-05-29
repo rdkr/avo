@@ -1,6 +1,6 @@
-const channelGroups: Record<string, string> = {
-	"PLACEHOLDER_CS_CHANNEL_ID": "1340781340257423430", // cs
-	"PLACEHOLDER_TEST_CHANNEL_ID": "1401187418182516959", // test
+export const channelGroups: Record<string, string> = {
+	"862714922423943219": "1340781340257423430", // cs
+	"1401168219712000141": "1401187418182516959", // test
 };
 
 export function getNextQuarterHours(
@@ -38,7 +38,7 @@ export function getPairsFromContent(content: string): Map<string, string> {
 	for (const line of lines) {
 		const match = line.match(/^<@(\d+)> selected: (\d{2}:\d{2})$/);
 		if (!match) continue;
-		pairs.set(match[1], match[2]);
+		pairs.set(match[1]!, match[2]!);
 	}
 	return pairs;
 }

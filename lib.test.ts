@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+	channelGroups,
 	getContentFromPairs,
 	getNextQuarterHours,
 	getPairsFromContent,
 } from "./lib.ts";
 
-const csChannelId = "PLACEHOLDER_CS_CHANNEL_ID";
-const csGroupId = "1340781340257423430";
+const [csChannelId, csGroupId] = Object.entries(channelGroups)[0]!;
 
 describe("getNextQuarterHours", () => {
 	test("returns 24 slots by default", () => {

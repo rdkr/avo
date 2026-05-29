@@ -31,7 +31,7 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	});
 }
 
-function getContent(interaction: Interaction) {
+async function getContent(interaction: Interaction) {
 	const originalMessage = interaction.message;
 	const existingContent = originalMessage.content;
 	const pairs = getPairsFromContent(existingContent);
@@ -51,7 +51,7 @@ function getContent(interaction: Interaction) {
 			.map((id) => `<@${id}>`)
 			.join(",");
 		const latestTime = Array.from(pairs.values()).sort().slice(-1)[0];
-		interaction.channel.send({
+		await interaction.channel.send({
 			content: `${userTags} @ ${latestTime} :avocado:`,
 			allowedMentions: { parse: ["users"] },
 		});
@@ -74,9 +74,9 @@ export function setupHandlers(client: { on(event: string, listener: (...args: an
 			interaction.isStringSelectMenu() &&
 			interaction.customId === "time_select"
 		) {
-			const { originalMessage, newContent } = getContent(interaction);
-			await originalMessage.edit({ content: newContent });
 			await interaction.deferUpdate();
+			const { originalMessage, newContent } = await getContent(interaction);
+			await originalMessage.edit({ content: newContent });
 		}
 	});
 }
