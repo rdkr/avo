@@ -15,10 +15,6 @@ import {
 	getPairsFromContent,
 } from "./lib.ts";
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-// const group = "1401187418182516959"; // test
-
 async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	const selectMenu = new StringSelectMenuBuilder()
 		.setCustomId("time_select")
@@ -61,26 +57,32 @@ function getContent(interaction: Interaction) {
 		});
 	}
 
-	return { originalMessage, newContent: getContentFromPairs(pairs) };
+	return { originalMessage, newContent: getContentFromPairs(pairs, interaction.channelId) };
 }
 
-client.on(Events.ClientReady, (readyClient) => {
-	console.log(`Logged in as ${readyClient.user.tag}!`);
-});
+export function setupHandlers(client: { on(event: string, listener: (...args: any[]) => any): any }) {
+	client.on(Events.ClientReady, (readyClient: { user: { tag: string } }) => {
+		console.log(`Logged in as ${readyClient.user.tag}!`);
+	});
 
-client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-	if (interaction.isChatInputCommand()) {
-		if (interaction.commandName === "avo") {
-			await sendTimeSelectMenu(interaction);
+	client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+		if (interaction.isChatInputCommand()) {
+			if (interaction.commandName === "avo") {
+				await sendTimeSelectMenu(interaction);
+			}
+		} else if (
+			interaction.isStringSelectMenu() &&
+			interaction.customId === "time_select"
+		) {
+			const { originalMessage, newContent } = getContent(interaction);
+			await originalMessage.edit({ content: newContent });
+			await interaction.deferUpdate();
 		}
-	} else if (
-		interaction.isStringSelectMenu() &&
-		interaction.customId === "time_select"
-	) {
-		const { originalMessage, newContent } = getContent(interaction);
-		await originalMessage.edit({ content: newContent });
-		await interaction.deferUpdate(); // Silently acknowledge
-	}
-});
+	});
+}
 
-client.login(process.env.DISCORD_TOKEN);
+if (import.meta.main) {
+	const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+	setupHandlers(client);
+	client.login(process.env.DISCORD_TOKEN);
+}
