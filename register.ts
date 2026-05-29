@@ -1,5 +1,11 @@
 import { REST, Routes } from "discord.js";
 
+const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.CLIENT_ID;
+if (!token || !clientId) {
+	throw new Error("DISCORD_TOKEN and CLIENT_ID must be set");
+}
+
 const commands = [
 	{
 		name: "avo",
@@ -7,12 +13,12 @@ const commands = [
 	},
 ];
 
-const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN!);
+const rest = new REST({ version: "10" }).setToken(token);
 
 try {
 	console.log("Started refreshing application (/) commands.");
 
-	await rest.put(Routes.applicationCommands(process.env.CLIENT_ID!), {
+	await rest.put(Routes.applicationCommands(clientId), {
 		body: commands,
 	});
 

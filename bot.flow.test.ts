@@ -1,17 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { channelGroups } from "./lib.ts";
 import { setupHandlers } from "./bot.ts";
+import { channelGroups } from "./lib.ts";
+
+// biome-ignore lint/suspicious/noExplicitAny: loose handler type for the Discord client test double
+type EventHandler = (...args: any[]) => any;
 
 class MockClient {
-	private handlers = new Map<string, Array<(...args: any[]) => any>>();
+	private handlers = new Map<string, EventHandler[]>();
 
-	on(event: string, handler: (...args: any[]) => any) {
+	on(event: string, handler: EventHandler) {
 		const existing = this.handlers.get(event) ?? [];
 		this.handlers.set(event, [...existing, handler]);
 		return this;
 	}
 
-	async emit(event: string, ...args: any[]) {
+	async emit(event: string, ...args: unknown[]) {
 		for (const handler of this.handlers.get(event) ?? []) {
 			await handler(...args);
 		}
@@ -33,18 +36,27 @@ class MockMessage {
 class MockChannel {
 	sent: string[] = [];
 
+	isSendable() {
+		return true;
+	}
+
 	async send({ content }: { content: string }) {
 		this.sent.push(content);
 	}
 }
 
-const [CS_CHANNEL_ID, CS_GROUP_ID] = Object.entries(channelGroups)[0]!;
+const csEntry = Object.entries(channelGroups)[0];
+if (!csEntry) throw new Error("channelGroups must have at least one entry");
+const [CS_CHANNEL_ID, CS_GROUP_ID] = csEntry;
 const UNKNOWN_CHANNEL_ID = "UNKNOWN_CHANNEL";
 const TIME_VALUE = new Date("2024-01-01T14:00:00Z").toISOString();
 const INTERACTION_CREATE = "interactionCreate";
 const TEST_USERS = ["1001", "1002", "1003", "1004", "1005"];
 
-function makeSlashInteraction(channelId: string, onReply: (content: string) => void) {
+function makeSlashInteraction(
+	channelId: string,
+	onReply: (content: string) => void,
+) {
 	return {
 		isChatInputCommand: () => true,
 		isStringSelectMenu: () => false,
@@ -79,7 +91,12 @@ describe("bot flow", () => {
 		setupHandlers(client);
 
 		let repliedContent = "";
-		await client.emit(INTERACTION_CREATE, makeSlashInteraction(CS_CHANNEL_ID, (c) => { repliedContent = c; }));
+		await client.emit(
+			INTERACTION_CREATE,
+			makeSlashInteraction(CS_CHANNEL_ID, (c) => {
+				repliedContent = c;
+			}),
+		);
 
 		expect(repliedContent).toContain(`<@&${CS_GROUP_ID}>`);
 	});
@@ -89,7 +106,12 @@ describe("bot flow", () => {
 		setupHandlers(client);
 
 		let repliedContent = "";
-		await client.emit(INTERACTION_CREATE, makeSlashInteraction(UNKNOWN_CHANNEL_ID, (c) => { repliedContent = c; }));
+		await client.emit(
+			INTERACTION_CREATE,
+			makeSlashInteraction(UNKNOWN_CHANNEL_ID, (c) => {
+				repliedContent = c;
+			}),
+		);
 
 		expect(repliedContent).toBe("?");
 	});
@@ -100,19 +122,27 @@ describe("bot flow", () => {
 
 		const channel = new MockChannel();
 		let initialContent = "";
-		await client.emit(INTERACTION_CREATE, makeSlashInteraction(CS_CHANNEL_ID, (c) => { initialContent = c; }));
+		await client.emit(
+			INTERACTION_CREATE,
+			makeSlashInteraction(CS_CHANNEL_ID, (c) => {
+				initialContent = c;
+			}),
+		);
 
 		const message = new MockMessage(initialContent);
 
 		for (const [i, userId] of TEST_USERS.entries()) {
-			await client.emit(INTERACTION_CREATE, makeSelectInteraction(message, channel, userId, CS_CHANNEL_ID));
+			await client.emit(
+				INTERACTION_CREATE,
+				makeSelectInteraction(message, channel, userId, CS_CHANNEL_ID),
+			);
 
 			expect(message.content).toContain(`<@${userId}> selected:`);
 			if (i < 4) expect(channel.sent).toHaveLength(0);
 		}
 
 		expect(channel.sent).toHaveLength(1);
-		expect(channel.sent[0]).toContain(":avocado:");
+		expect(channel.sent[0]).toContain("🥑");
 		for (const userId of TEST_USERS) {
 			expect(channel.sent[0]).toContain(`<@${userId}>`);
 		}
@@ -124,12 +154,20 @@ describe("bot flow", () => {
 
 		const channel = new MockChannel();
 		let initialContent = "";
-		await client.emit(INTERACTION_CREATE, makeSlashInteraction(CS_CHANNEL_ID, (c) => { initialContent = c; }));
+		await client.emit(
+			INTERACTION_CREATE,
+			makeSlashInteraction(CS_CHANNEL_ID, (c) => {
+				initialContent = c;
+			}),
+		);
 
 		const message = new MockMessage(initialContent);
 
 		for (const userId of TEST_USERS.slice(0, 4)) {
-			await client.emit(INTERACTION_CREATE, makeSelectInteraction(message, channel, userId, CS_CHANNEL_ID));
+			await client.emit(
+				INTERACTION_CREATE,
+				makeSelectInteraction(message, channel, userId, CS_CHANNEL_ID),
+			);
 		}
 
 		expect(channel.sent).toHaveLength(0);

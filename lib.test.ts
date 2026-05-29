@@ -6,7 +6,9 @@ import {
 	getPairsFromContent,
 } from "./lib.ts";
 
-const [csChannelId, csGroupId] = Object.entries(channelGroups)[0]!;
+const csEntry = Object.entries(channelGroups)[0];
+if (!csEntry) throw new Error("channelGroups must have at least one entry");
+const [csChannelId, csGroupId] = csEntry;
 
 describe("getNextQuarterHours", () => {
 	test("returns 24 slots by default", () => {
@@ -19,36 +21,37 @@ describe("getNextQuarterHours", () => {
 	});
 
 	test("slots are 15 minutes apart", () => {
-		const slots = getNextQuarterHours(4);
-		for (let i = 1; i < slots.length; i++) {
-			const diff =
-				new Date(slots[i].value).getTime() -
-				new Date(slots[i - 1].value).getTime();
-			expect(diff).toBe(15 * 60 * 1000);
-		}
+		const times = getNextQuarterHours(4).map((slot) =>
+			new Date(slot.value).getTime(),
+		);
+		times.reduce((prev, cur) => {
+			expect(cur - prev).toBe(15 * 60 * 1000);
+			return cur;
+		});
 	});
 
 	test("first slot is snapped to the next quarter hour", () => {
 		// 12:07 → next quarter is 12:15
 		const now = new Date("2024-01-01T12:07:00Z");
-		const slots = getNextQuarterHours(1, now);
-		const first = new Date(slots[0].value);
-		expect(first.getMinutes() % 15).toBe(0);
-		expect(first.getSeconds()).toBe(0);
+		const [first] = getNextQuarterHours(1, now);
+		if (!first) throw new Error("expected a slot");
+		const date = new Date(first.value);
+		expect(date.getMinutes() % 15).toBe(0);
+		expect(date.getSeconds()).toBe(0);
 	});
 
 	test("first slot is the same quarter when already on the boundary", () => {
 		const now = new Date("2024-01-01T12:00:00Z");
-		const slots = getNextQuarterHours(1, now);
-		const first = new Date(slots[0].value);
-		expect(first.getMinutes()).toBe(0);
+		const [first] = getNextQuarterHours(1, now);
+		if (!first) throw new Error("expected a slot");
+		expect(new Date(first.value).getMinutes()).toBe(0);
 	});
 
 	test("each slot has a label and ISO value", () => {
 		const slots = getNextQuarterHours(2);
 		for (const slot of slots) {
 			expect(slot.label).toMatch(/^\d{2}:\d{2}$/);
-			expect(() => new Date(slot.value)).not.toThrow();
+			expect(Number.isNaN(new Date(slot.value).getTime())).toBe(false);
 		}
 	});
 });
@@ -80,7 +83,7 @@ describe("getPairsFromContent", () => {
 	});
 
 	test("later entry for same user overwrites earlier", () => {
-		const content = `<@123> selected: 09:00\n<@123> selected: 10:00`;
+		const content = "<@123> selected: 09:00\n<@123> selected: 10:00";
 		const pairs = getPairsFromContent(content);
 		expect(pairs.get("123")).toBe("10:00");
 		expect(pairs.size).toBe(1);

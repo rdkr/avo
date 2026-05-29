@@ -7,17 +7,13 @@ export function getNextQuarterHours(
 	count = 24,
 	now = new Date(),
 ): { label: string; value: string }[] {
-	const base = new Date(now);
-	const minutes = base.getMinutes();
-	const nextQuarter = Math.ceil(minutes / 15) * 15;
-	base.setMinutes(nextQuarter);
-	base.setSeconds(0);
-	base.setMilliseconds(0);
+	const quarterMs = 15 * 60 * 1000;
+	const base = new Date(Math.ceil(now.getTime() / quarterMs) * quarterMs);
 
 	const options = [];
 
 	for (let i = 0; i < count; i++) {
-		const slot = new Date(base.getTime() + i * 15 * 60 * 1000);
+		const slot = new Date(base.getTime() + i * quarterMs);
 		const timeStr = slot.toLocaleTimeString([], {
 			hour: "2-digit",
 			minute: "2-digit",
@@ -38,12 +34,17 @@ export function getPairsFromContent(content: string): Map<string, string> {
 	for (const line of lines) {
 		const match = line.match(/^<@(\d+)> selected: (\d{2}:\d{2})$/);
 		if (!match) continue;
-		pairs.set(match[1]!, match[2]!);
+		const [, userId, time] = match;
+		if (!userId || !time) continue;
+		pairs.set(userId, time);
 	}
 	return pairs;
 }
 
-export function getContentFromPairs(pairs: Map<string, string>, channelId?: string) {
+export function getContentFromPairs(
+	pairs: Map<string, string>,
+	channelId?: string | null,
+) {
 	const updatedLines = Array.from(pairs.entries()).map(
 		([userId, time]) => `<@${userId}> selected: ${time}`,
 	);

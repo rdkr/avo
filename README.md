@@ -1,20 +1,40 @@
 # avo
 
-To install dependencies:
+Discord bot that collects availability from a role group and posts a meetup time once 5 people have responded.
+
+## Install
 
 ```bash
 bun install
 ```
 
-To run:
+## Run
+
+Requires `DISCORD_TOKEN` in the environment (e.g. via `.env`):
 
 ```bash
 bun run bot.ts
 ```
 
-To format:
+## Register slash commands
+
+One-shot; requires `DISCORD_TOKEN` and `CLIENT_ID`:
+
 ```bash
-bun run biome check bot.ts --fix
+bun run register.ts
 ```
 
-This project was created using `bun init` in bun v1.2.9. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## Test
+
+```bash
+make test
+```
+
+## Lint / format
+
+```bash
+bunx biome check .          # check
+bunx biome check --write .  # apply fixes
+```
+
+Runtime is [Bun](https://bun.sh).

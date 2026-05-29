@@ -7,7 +7,7 @@ import {
 	StringSelectMenuBuilder,
 } from "discord.js";
 
-import type { Interaction } from "discord.js";
+import type { Interaction, StringSelectMenuInteraction } from "discord.js";
 
 import {
 	getContentFromPairs,
@@ -31,14 +31,17 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 	});
 }
 
-async function getContent(interaction: Interaction) {
+async function getContent(interaction: StringSelectMenuInteraction) {
 	const originalMessage = interaction.message;
 	const existingContent = originalMessage.content;
 	const pairs = getPairsFromContent(existingContent);
 
 	const userId = interaction.user.id;
-	const selectedTime = new Date(interaction.values[0]);
-	const time = selectedTime.toLocaleTimeString([], {
+	const selectedValue = interaction.values[0];
+	if (!selectedValue) {
+		return { originalMessage, newContent: existingContent };
+	}
+	const time = new Date(selectedValue).toLocaleTimeString([], {
 		hour: "2-digit",
 		minute: "2-digit",
 		hour12: false,
@@ -46,43 +49,61 @@ async function getContent(interaction: Interaction) {
 
 	pairs.set(userId, time);
 
-	if (pairs.size >= 5 && interaction.channel) {
+	if (pairs.size >= 5 && interaction.channel?.isSendable()) {
 		const userTags = Array.from(pairs.keys())
 			.map((id) => `<@${id}>`)
 			.join(",");
 		const latestTime = Array.from(pairs.values()).sort().slice(-1)[0];
 		await interaction.channel.send({
-			content: `${userTags} @ ${latestTime} :avocado:`,
+			content: `${userTags} @ ${latestTime} 🥑`,
 			allowedMentions: { parse: ["users"] },
 		});
 	}
 
-	return { originalMessage, newContent: getContentFromPairs(pairs, interaction.channelId) };
+	return {
+		originalMessage,
+		newContent: getContentFromPairs(pairs, interaction.channelId),
+	};
 }
 
-export function setupHandlers(client: { on(event: string, listener: (...args: any[]) => any): any }) {
+// biome-ignore lint/suspicious/noExplicitAny: loose handler type so a test double can be injected
+type EventHandler = (...args: any[]) => unknown;
+
+type ClientLike = {
+	on(event: string, listener: EventHandler): unknown;
+};
+
+export function setupHandlers(client: ClientLike) {
 	client.on(Events.ClientReady, (readyClient: { user: { tag: string } }) => {
 		console.log(`Logged in as ${readyClient.user.tag}!`);
 	});
 
 	client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-		if (interaction.isChatInputCommand()) {
-			if (interaction.commandName === "avo") {
-				await sendTimeSelectMenu(interaction);
+		try {
+			if (interaction.isChatInputCommand()) {
+				if (interaction.commandName === "avo") {
+					await sendTimeSelectMenu(interaction);
+				}
+			} else if (
+				interaction.isStringSelectMenu() &&
+				interaction.customId === "time_select"
+			) {
+				await interaction.deferUpdate();
+				const { originalMessage, newContent } = await getContent(interaction);
+				await originalMessage.edit({ content: newContent });
 			}
-		} else if (
-			interaction.isStringSelectMenu() &&
-			interaction.customId === "time_select"
-		) {
-			await interaction.deferUpdate();
-			const { originalMessage, newContent } = await getContent(interaction);
-			await originalMessage.edit({ content: newContent });
+		} catch (error) {
+			console.error("Failed to handle interaction:", error);
 		}
 	});
 }
 
 if (import.meta.main) {
+	const token = process.env.DISCORD_TOKEN;
+	if (!token) {
+		throw new Error("DISCORD_TOKEN is not set");
+	}
 	const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 	setupHandlers(client);
-	client.login(process.env.DISCORD_TOKEN);
+	client.login(token);
 }

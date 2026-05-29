@@ -33,11 +33,13 @@ CMD ["bun", "test"]
 
 # copy production dependencies and source code into final image
 FROM base AS release
+# display meetup times in UK time rather than the container default (UTC)
+ENV TZ=Europe/London
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/bot.ts .
+COPY --from=prerelease /usr/src/app/lib.ts .
 COPY --from=prerelease /usr/src/app/package.json .
 
 # run the app
 USER bun
-EXPOSE 3000/tcp
 ENTRYPOINT [ "bun", "run", "bot.ts" ]
