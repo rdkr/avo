@@ -26,6 +26,11 @@ COPY . .
 # RUN bun test
 # RUN bun run build
 
+# dev stage: deps baked in, source files mounted at runtime
+FROM base AS dev
+COPY --from=install /temp/dev/node_modules node_modules
+CMD ["bun", "test"]
+
 # copy production dependencies and source code into final image
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
