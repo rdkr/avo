@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { setupHandlers } from "./bot.ts";
-import { channelGroups } from "./lib.ts";
+import { channelConfigs } from "./lib.ts";
 
 // biome-ignore lint/suspicious/noExplicitAny: loose handler type for the Discord client test double
 type EventHandler = (...args: any[]) => any;
@@ -45,9 +45,10 @@ class MockChannel {
 	}
 }
 
-const csEntry = Object.entries(channelGroups)[0];
-if (!csEntry) throw new Error("channelGroups must have at least one entry");
-const [CS_CHANNEL_ID, CS_GROUP_ID] = csEntry;
+const csEntry = Object.entries(channelConfigs)[0];
+if (!csEntry) throw new Error("channelConfigs must have at least one entry");
+const [CS_CHANNEL_ID, csConfig] = csEntry;
+const CS_GROUP_ID = csConfig.groupId;
 const UNKNOWN_CHANNEL_ID = "UNKNOWN_CHANNEL";
 const TIME_VALUE = new Date("2024-01-01T14:00:00Z").toISOString();
 const INTERACTION_CREATE = "interactionCreate";
@@ -171,5 +172,33 @@ describe("bot flow", () => {
 		}
 
 		expect(channel.sent).toHaveLength(0);
+	});
+
+	test("5 users in an unconfigured channel never alerts", async () => {
+		const client = new MockClient();
+		setupHandlers(client);
+
+		const channel = new MockChannel();
+		let initialContent = "";
+		await client.emit(
+			INTERACTION_CREATE,
+			makeSlashInteraction(UNKNOWN_CHANNEL_ID, (c) => {
+				initialContent = c;
+			}),
+		);
+
+		const message = new MockMessage(initialContent);
+
+		for (const userId of TEST_USERS) {
+			await client.emit(
+				INTERACTION_CREATE,
+				makeSelectInteraction(message, channel, userId, UNKNOWN_CHANNEL_ID),
+			);
+		}
+
+		expect(channel.sent).toHaveLength(0);
+		for (const userId of TEST_USERS) {
+			expect(message.content).toContain(`<@${userId}> selected:`);
+		}
 	});
 });

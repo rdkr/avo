@@ -13,6 +13,7 @@ import {
 	getContentFromPairs,
 	getNextQuarterHours,
 	getPairsFromContent,
+	shouldAlert,
 } from "./lib.ts";
 
 async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
@@ -49,7 +50,10 @@ async function getContent(interaction: StringSelectMenuInteraction) {
 
 	pairs.set(userId, time);
 
-	if (pairs.size >= 5 && interaction.channel?.isSendable()) {
+	if (
+		shouldAlert(interaction.channelId, pairs.size) &&
+		interaction.channel?.isSendable()
+	) {
 		const userTags = Array.from(pairs.keys())
 			.map((id) => `<@${id}>`)
 			.join(",");

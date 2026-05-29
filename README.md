@@ -1,6 +1,6 @@
 # avo
 
-Discord bot that collects availability from a role group and posts a meetup time once 5 people have responded.
+Discord bot that collects availability from a role group and posts a meetup time once a channel's responder threshold is reached (configured per channel, default 5).
 
 ## Install
 

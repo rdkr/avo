@@ -1,14 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
-	channelGroups,
+	channelConfigs,
 	getContentFromPairs,
 	getNextQuarterHours,
 	getPairsFromContent,
+	shouldAlert,
 } from "./lib.ts";
 
-const csEntry = Object.entries(channelGroups)[0];
-if (!csEntry) throw new Error("channelGroups must have at least one entry");
-const [csChannelId, csGroupId] = csEntry;
+const csEntry = Object.entries(channelConfigs)[0];
+if (!csEntry) throw new Error("channelConfigs must have at least one entry");
+const [csChannelId, csConfig] = csEntry;
+const csGroupId = csConfig.groupId;
 
 describe("getNextQuarterHours", () => {
 	test("returns 24 slots by default", () => {
@@ -110,5 +112,25 @@ describe("getContentFromPairs", () => {
 		const content = getContentFromPairs(original, csChannelId);
 		const parsed = getPairsFromContent(content);
 		expect(parsed).toEqual(original);
+	});
+});
+
+describe("shouldAlert", () => {
+	test("true once a configured channel reaches its threshold", () => {
+		expect(shouldAlert(csChannelId, csConfig.threshold)).toBe(true);
+		expect(shouldAlert(csChannelId, csConfig.threshold + 1)).toBe(true);
+	});
+
+	test("false below a configured channel's threshold", () => {
+		expect(shouldAlert(csChannelId, csConfig.threshold - 1)).toBe(false);
+	});
+
+	test("false for unconfigured channels regardless of count", () => {
+		expect(shouldAlert("UNKNOWN_CHANNEL", 100)).toBe(false);
+	});
+
+	test("false when there is no channel id", () => {
+		expect(shouldAlert(undefined, 100)).toBe(false);
+		expect(shouldAlert(null, 100)).toBe(false);
 	});
 });

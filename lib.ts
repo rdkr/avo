@@ -1,7 +1,24 @@
-export const channelGroups: Record<string, string> = {
-	"862714922423943219": "1340781340257423430", // cs
-	"1401168219712000141": "1401187418182516959", // test
+export type ChannelConfig = {
+	groupId: string;
+	threshold: number;
 };
+
+// Channels the bot is configured for: the role group to tag and how many
+// responders trigger the meetup alert. /avo still works in other channels,
+// but they get no role tag and never alert.
+export const channelConfigs: Record<string, ChannelConfig> = {
+	"862714922423943219": { groupId: "1340781340257423430", threshold: 5 }, // cs
+	"1401168219712000141": { groupId: "1401187418182516959", threshold: 5 }, // test
+};
+
+export function shouldAlert(
+	channelId: string | null | undefined,
+	responderCount: number,
+): boolean {
+	if (!channelId) return false;
+	const config = channelConfigs[channelId];
+	return config !== undefined && responderCount >= config.threshold;
+}
 
 export function getNextQuarterHours(
 	count = 24,
@@ -48,7 +65,7 @@ export function getContentFromPairs(
 	const updatedLines = Array.from(pairs.entries()).map(
 		([userId, time]) => `<@${userId}> selected: ${time}`,
 	);
-	const groupId = channelId ? channelGroups[channelId] : undefined;
+	const groupId = channelId ? channelConfigs[channelId]?.groupId : undefined;
 	const header = groupId ? `<@&${groupId}> ?` : "?";
 	return [header, ...updatedLines].join("\n");
 }
