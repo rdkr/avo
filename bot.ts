@@ -29,7 +29,7 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 		selectMenu,
 	);
 	await interaction.reply({
-		content: getContentFromPairs(new Map()),
+		content: getContentFromPairs(new Map(), interaction.channelId),
 		components: [row],
 		allowedMentions: { parse: ["roles"] },
 	});

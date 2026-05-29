@@ -1,4 +1,7 @@
-export const group = "1340781340257423430"; // cs
+const channelGroups: Record<string, string> = {
+	"PLACEHOLDER_CS_CHANNEL_ID": "1340781340257423430", // cs
+	"PLACEHOLDER_TEST_CHANNEL_ID": "1401187418182516959", // test
+};
 
 export function getNextQuarterHours(
 	count = 24,
@@ -40,9 +43,11 @@ export function getPairsFromContent(content: string): Map<string, string> {
 	return pairs;
 }
 
-export function getContentFromPairs(pairs: Map<string, string>) {
+export function getContentFromPairs(pairs: Map<string, string>, channelId?: string) {
 	const updatedLines = Array.from(pairs.entries()).map(
 		([userId, time]) => `<@${userId}> selected: ${time}`,
 	);
-	return [`<@&${group}> ?`, ...updatedLines].join("\n");
+	const groupId = channelId ? channelGroups[channelId] : undefined;
+	const header = groupId ? `<@&${groupId}> ?` : "?";
+	return [header, ...updatedLines].join("\n");
 }

@@ -3,8 +3,10 @@ import {
 	getContentFromPairs,
 	getNextQuarterHours,
 	getPairsFromContent,
-	group,
 } from "./lib.ts";
+
+const csChannelId = "PLACEHOLDER_CS_CHANNEL_ID";
+const csGroupId = "1340781340257423430";
 
 describe("getNextQuarterHours", () => {
 	test("returns 24 slots by default", () => {
@@ -53,14 +55,14 @@ describe("getNextQuarterHours", () => {
 
 describe("getPairsFromContent", () => {
 	test("parses a single user selection", () => {
-		const content = `<@&${group}> ?\n<@123456> selected: 14:00`;
+		const content = `<@&${csGroupId}> ?\n<@123456> selected: 14:00`;
 		const pairs = getPairsFromContent(content);
 		expect(pairs.get("123456")).toBe("14:00");
 		expect(pairs.size).toBe(1);
 	});
 
 	test("parses multiple selections", () => {
-		const content = `<@&${group}> ?\n<@111> selected: 09:30\n<@222> selected: 10:15`;
+		const content = `<@&${csGroupId}> ?\n<@111> selected: 09:30\n<@222> selected: 10:15`;
 		const pairs = getPairsFromContent(content);
 		expect(pairs.get("111")).toBe("09:30");
 		expect(pairs.get("222")).toBe("10:15");
@@ -87,14 +89,14 @@ describe("getPairsFromContent", () => {
 
 describe("getContentFromPairs", () => {
 	test("empty map produces just the header", () => {
-		const content = getContentFromPairs(new Map());
-		expect(content).toBe(`<@&${group}> ?`);
+		const content = getContentFromPairs(new Map(), csChannelId);
+		expect(content).toBe(`<@&${csGroupId}> ?`);
 	});
 
 	test("single entry appears after the header", () => {
 		const pairs = new Map([["789", "15:30"]]);
-		const content = getContentFromPairs(pairs);
-		expect(content).toBe(`<@&${group}> ?\n<@789> selected: 15:30`);
+		const content = getContentFromPairs(pairs, csChannelId);
+		expect(content).toBe(`<@&${csGroupId}> ?\n<@789> selected: 15:30`);
 	});
 
 	test("output can be round-tripped through getPairsFromContent", () => {
@@ -102,7 +104,7 @@ describe("getContentFromPairs", () => {
 			["111", "09:00"],
 			["222", "10:15"],
 		]);
-		const content = getContentFromPairs(original);
+		const content = getContentFromPairs(original, csChannelId);
 		const parsed = getPairsFromContent(content);
 		expect(parsed).toEqual(original);
 	});
