@@ -23,9 +23,11 @@ class MockClient {
 
 class MockMessage {
 	content: string;
+	createdAt: Date;
 
-	constructor(content: string) {
+	constructor(content: string, createdAt = new Date("2024-01-01T12:00:00Z")) {
 		this.content = content;
+		this.createdAt = createdAt;
 	}
 
 	async edit({ content }: { content: string }) {
@@ -72,6 +74,7 @@ function makeSelectInteraction(
 	channel: MockChannel,
 	userId: string,
 	channelId: string,
+	timeValue = TIME_VALUE,
 ) {
 	return {
 		isChatInputCommand: () => false,
@@ -79,7 +82,7 @@ function makeSelectInteraction(
 		customId: "time_select",
 		message,
 		user: { id: userId },
-		values: [TIME_VALUE],
+		values: [timeValue],
 		channelId,
 		channel,
 		deferUpdate: async () => {},
@@ -147,6 +150,36 @@ describe("bot flow", () => {
 		for (const userId of TEST_USERS) {
 			expect(channel.sent[0]).toContain(`<@${userId}>`);
 		}
+	});
+
+	test("alert uses the latest time when the poll crosses midnight", async () => {
+		const client = new MockClient();
+		setupHandlers(client);
+
+		const channel = new MockChannel();
+		const message = new MockMessage(
+			`<@&${CS_GROUP_ID}> ?`,
+			new Date("2024-01-01T22:00:00Z"),
+		);
+
+		for (const [i, userId] of TEST_USERS.entries()) {
+			// one person picks 00:15 the next day, everyone else 23:45
+			const timeValue =
+				i === 1 ? "2024-01-02T00:15:00.000Z" : "2024-01-01T23:45:00.000Z";
+			await client.emit(
+				INTERACTION_CREATE,
+				makeSelectInteraction(
+					message,
+					channel,
+					userId,
+					CS_CHANNEL_ID,
+					timeValue,
+				),
+			);
+		}
+
+		expect(channel.sent).toHaveLength(1);
+		expect(channel.sent[0]).toEndWith("@ 00:15 🥑");
 	});
 
 	test("fewer than 5 users does not trigger alert", async () => {

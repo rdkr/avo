@@ -10,7 +10,9 @@ import {
 import type { Interaction, StringSelectMenuInteraction } from "discord.js";
 
 import {
+	formatTime,
 	getContentFromPairs,
+	getLatestTime,
 	getNextQuarterHours,
 	getPairsFromContent,
 	shouldAlert,
@@ -42,13 +44,7 @@ async function getContent(interaction: StringSelectMenuInteraction) {
 	if (!selectedValue) {
 		return { originalMessage, newContent: existingContent };
 	}
-	const time = new Date(selectedValue).toLocaleTimeString([], {
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: false,
-	});
-
-	pairs.set(userId, time);
+	pairs.set(userId, formatTime(new Date(selectedValue)));
 
 	if (
 		shouldAlert(interaction.channelId, pairs.size) &&
@@ -57,7 +53,7 @@ async function getContent(interaction: StringSelectMenuInteraction) {
 		const userTags = Array.from(pairs.keys())
 			.map((id) => `<@${id}>`)
 			.join(",");
-		const latestTime = Array.from(pairs.values()).sort().slice(-1)[0];
+		const latestTime = getLatestTime(pairs.values(), originalMessage.createdAt);
 		await interaction.channel.send({
 			content: `${userTags} @ ${latestTime} 🥑`,
 			allowedMentions: { parse: ["users"] },

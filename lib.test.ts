@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
 	channelConfigs,
+	formatTime,
 	getContentFromPairs,
+	getLatestTime,
 	getNextQuarterHours,
 	getPairsFromContent,
 	shouldAlert,
@@ -55,6 +57,46 @@ describe("getNextQuarterHours", () => {
 			expect(slot.label).toMatch(/^\d{2}:\d{2}$/);
 			expect(Number.isNaN(new Date(slot.value).getTime())).toBe(false);
 		}
+	});
+});
+
+describe("formatTime", () => {
+	test("formats in London time during GMT", () => {
+		expect(formatTime(new Date("2024-01-01T12:00:00Z"))).toBe("12:00");
+	});
+
+	test("formats in London time during BST", () => {
+		expect(formatTime(new Date("2024-07-01T12:00:00Z"))).toBe("13:00");
+	});
+
+	test("midnight is 00:00, not 24:00", () => {
+		expect(formatTime(new Date("2024-01-01T00:00:00Z"))).toBe("00:00");
+	});
+});
+
+describe("getLatestTime", () => {
+	const pollStart = new Date("2024-01-01T22:00:00Z");
+
+	test("returns the latest time within a single day", () => {
+		const start = new Date("2024-01-01T12:00:00Z");
+		expect(getLatestTime(["14:00", "16:30", "13:15"], start)).toBe("16:30");
+	});
+
+	test("times before the poll start count as the next day", () => {
+		expect(getLatestTime(["23:45", "00:15", "22:30"], pollStart)).toBe("00:15");
+	});
+
+	test("picks the latest of several times after midnight", () => {
+		expect(getLatestTime(["00:15", "01:30", "23:45"], pollStart)).toBe("01:30");
+	});
+
+	test("a time equal to the poll start is the same day", () => {
+		expect(getLatestTime(["22:00", "00:15"], pollStart)).toBe("00:15");
+		expect(getLatestTime(["22:00", "23:00"], pollStart)).toBe("23:00");
+	});
+
+	test("returns undefined when there are no times", () => {
+		expect(getLatestTime([], pollStart)).toBeUndefined();
 	});
 });
 

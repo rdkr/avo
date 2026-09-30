@@ -20,6 +20,34 @@ export function shouldAlert(
 	return config !== undefined && responderCount >= config.threshold;
 }
 
+// Times are always shown in London time, whatever timezone the process runs in.
+const TIME_ZONE = "Europe/London";
+
+export function formatTime(date: Date): string {
+	return date.toLocaleTimeString("en-GB", {
+		hour: "2-digit",
+		minute: "2-digit",
+		hourCycle: "h23",
+		timeZone: TIME_ZONE,
+	});
+}
+
+// Selections are stored as bare HH:MM, so the poll's start time is what tells
+// us which ones fall after midnight: the menu only offers times from the poll
+// start onwards, so anything earlier on the clock must be the next day.
+export function getLatestTime(
+	times: Iterable<string>,
+	pollStart: Date,
+): string | undefined {
+	const start = formatTime(pollStart);
+	const sortKey = (time: string) => `${time < start ? 1 : 0}${time}`;
+	let latest: string | undefined;
+	for (const time of times) {
+		if (latest === undefined || sortKey(time) > sortKey(latest)) latest = time;
+	}
+	return latest;
+}
+
 export function getNextQuarterHours(
 	count = 24,
 	now = new Date(),
@@ -31,13 +59,8 @@ export function getNextQuarterHours(
 
 	for (let i = 0; i < count; i++) {
 		const slot = new Date(base.getTime() + i * quarterMs);
-		const timeStr = slot.toLocaleTimeString([], {
-			hour: "2-digit",
-			minute: "2-digit",
-			hour12: false,
-		});
 		options.push({
-			label: timeStr,
+			label: formatTime(slot),
 			value: slot.toISOString(),
 		});
 	}

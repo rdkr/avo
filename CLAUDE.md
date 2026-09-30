@@ -8,7 +8,7 @@ Bun (not Node). Use `bun` for all installs and script execution.
 
 ## Structure
 
-- `lib.ts` — pure helper functions (no Discord imports): `getNextQuarterHours`, `getPairsFromContent`, `getContentFromPairs`, `shouldAlert`, and the `channelConfigs` channel→{group, threshold} map.
+- `lib.ts` — pure helper functions (no Discord imports): `formatTime`, `getLatestTime`, `getNextQuarterHours`, `getPairsFromContent`, `getContentFromPairs`, `shouldAlert`, and the `channelConfigs` channel→{group, threshold} map.
 - `bot.ts` — Discord client setup and event handlers; imports from `lib.ts`.
 - `lib.test.ts` — Bun tests for the pure functions in `lib.ts`.
 - `bot.flow.test.ts` — Bun tests for the interaction flow via an injected mock client (no Discord connection needed).
@@ -39,7 +39,7 @@ bun test
 | `install` | installs dev and prod deps in separate temp dirs |
 | `dev` | dev deps only; source mounted at runtime for `bun test` |
 | `prerelease` | dev deps + full source copy |
-| `release` | prod deps + `bot.ts` & `lib.ts`; sets `TZ=Europe/London`; runs `bun run bot.ts` |
+| `release` | prod deps + `bot.ts` & `lib.ts`; runs `bun run bot.ts` |
 
 ## Channel config
 
@@ -53,7 +53,9 @@ bun test
 ## Known behaviors (intentional, not bugs)
 
 - The meetup alert fires only in configured channels (see Channel config), using that channel's threshold; unconfigured channels never alert. Within a configured channel it re-sends on **every** selection past the threshold, not only on the first crossing — a live nudge as more people pile in or change times.
-- The posted meetup time is the lexicographically-latest `HH:MM` among selections; windows that cross midnight are not specially handled.
+- Times are always formatted in `Europe/London` (`formatTime` in `lib.ts`), regardless of the process timezone.
+- The posted meetup time is the latest `HH:MM` among selections. Selections are stored as bare `HH:MM`, so `getLatestTime` uses the poll message's creation time to order them: any time earlier on the clock than the poll start is treated as the next day.
+- Known limitation: on the night the clocks go back, 01:00–01:45 occurs twice, so the menu shows duplicate labels and the ordering within that hour is ambiguous. Not handled.
 - CI (`.github/workflows/ci.yaml`) builds and pushes `ghcr.io/rdkr/avo:latest` on every push to any branch, with no test/lint gate.
 
 ## Linting
