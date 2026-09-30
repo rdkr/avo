@@ -1,11 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
 	channelConfigs,
+	formatDay,
 	formatTime,
+	getContentFromDays,
 	getContentFromPairs,
+	getDaysFromContent,
 	getLatestTime,
+	getNextDays,
 	getNextQuarterHours,
 	getPairsFromContent,
+	setUserDays,
 	shouldAlert,
 } from "./lib.ts";
 
@@ -154,6 +159,113 @@ describe("getContentFromPairs", () => {
 		const content = getContentFromPairs(original, csChannelId);
 		const parsed = getPairsFromContent(content);
 		expect(parsed).toEqual(original);
+	});
+});
+
+describe("formatDay", () => {
+	test("formats as weekday and ordinal date", () => {
+		expect(formatDay(new Date("2024-01-06T12:00:00Z"))).toBe("Sat 6th");
+	});
+
+	test("uses the right ordinal suffix", () => {
+		const suffixes: [number, string][] = [
+			[1, "Mon 1st"],
+			[2, "Tue 2nd"],
+			[3, "Wed 3rd"],
+			[4, "Thu 4th"],
+			[11, "Thu 11th"],
+			[12, "Fri 12th"],
+			[13, "Sat 13th"],
+			[21, "Sun 21st"],
+			[22, "Mon 22nd"],
+			[23, "Tue 23rd"],
+			[31, "Wed 31st"],
+		];
+		for (const [day, expected] of suffixes) {
+			expect(formatDay(new Date(Date.UTC(2024, 0, day, 12)))).toBe(expected);
+		}
+	});
+
+	test("uses the London date", () => {
+		// 23:30 UTC in summer is already the next day in London
+		expect(formatDay(new Date("2024-07-01T23:30:00Z"))).toBe("Tue 2nd");
+	});
+});
+
+describe("getNextDays", () => {
+	test("returns 25 days by default, starting today", () => {
+		const days = getNextDays(undefined, new Date("2024-01-30T12:00:00Z"));
+		expect(days).toHaveLength(25);
+		expect(days[0]?.label).toBe("Tue 30th");
+		expect(days[1]?.label).toBe("Wed 31st");
+		expect(days[2]?.label).toBe("Thu 1st");
+		expect(days[24]?.label).toBe("Fri 23rd");
+	});
+
+	test("labels are unique and used as values", () => {
+		const days = getNextDays(25, new Date("2024-02-10T12:00:00Z"));
+		expect(new Set(days.map((day) => day.label)).size).toBe(25);
+		for (const day of days) expect(day.value).toBe(day.label);
+	});
+
+	test("does not skip or repeat a day when the clocks change", () => {
+		// clocks go back on 27 Oct 2024 and forward on 31 Mar 2024
+		const autumn = getNextDays(4, new Date("2024-10-25T23:30:00Z"));
+		expect(autumn.map((day) => day.label)).toEqual([
+			"Sat 26th",
+			"Sun 27th",
+			"Mon 28th",
+			"Tue 29th",
+		]);
+		const spring = getNextDays(3, new Date("2024-03-30T00:30:00Z"));
+		expect(spring.map((day) => day.label)).toEqual([
+			"Sat 30th",
+			"Sun 31st",
+			"Mon 1st",
+		]);
+	});
+});
+
+describe("day content", () => {
+	const dayOrder = ["Tue 30th", "Wed 31st", "Thu 1st"];
+
+	test("parses users per day and ignores other lines", () => {
+		const content = `<@&${csGroupId}> ?\nTue 30th: <@111> <@222>\nThu 1st: <@111>\nnoise`;
+		const days = getDaysFromContent(content);
+		expect(days.get("Tue 30th")).toEqual(["111", "222"]);
+		expect(days.get("Thu 1st")).toEqual(["111"]);
+		expect(days.size).toBe(2);
+	});
+
+	test("content round-trips through getDaysFromContent", () => {
+		const original = new Map([
+			["Tue 30th", ["111", "222"]],
+			["Thu 1st", ["111"]],
+		]);
+		const content = getContentFromDays(original, dayOrder, csChannelId);
+		expect(getDaysFromContent(content)).toEqual(original);
+	});
+
+	test("days are ordered by dayOrder and empty days are dropped", () => {
+		const days = new Map([
+			["Thu 1st", ["111"]],
+			["Wed 31st", []],
+			["Tue 30th", ["222"]],
+		]);
+		expect(getContentFromDays(days, dayOrder, csChannelId)).toBe(
+			`<@&${csGroupId}> ?\nTue 30th: <@222>\nThu 1st: <@111>`,
+		);
+	});
+
+	test("setUserDays replaces only that user's days", () => {
+		const days = new Map([
+			["Tue 30th", ["111", "222"]],
+			["Wed 31st", ["111"]],
+		]);
+		const updated = setUserDays(days, "111", ["Thu 1st"]);
+		expect(updated.get("Tue 30th")).toEqual(["222"]);
+		expect(updated.get("Wed 31st")).toEqual([]);
+		expect(updated.get("Thu 1st")).toEqual(["111"]);
 	});
 });
 

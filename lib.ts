@@ -88,7 +88,105 @@ export function getContentFromPairs(
 	const updatedLines = Array.from(pairs.entries()).map(
 		([userId, time]) => `<@${userId}> selected: ${time}`,
 	);
+	return [getHeader(channelId), ...updatedLines].join("\n");
+}
+
+function getHeader(channelId?: string | null) {
 	const groupId = channelId ? channelConfigs[channelId]?.groupId : undefined;
-	const header = groupId ? `<@&${groupId}> ?` : "?";
-	return [header, ...updatedLines].join("\n");
+	return groupId ? `<@&${groupId}> ?` : "?";
+}
+
+function getOrdinalSuffix(day: number): string {
+	if (day >= 11 && day <= 13) return "th";
+	return ["th", "st", "nd", "rd"][day % 10] ?? "th";
+}
+
+// e.g. "Sat 3rd" — the month is implicit, as day mode offers under a month.
+export function formatDay(date: Date): string {
+	const parts = new Intl.DateTimeFormat("en-GB", {
+		weekday: "short",
+		day: "numeric",
+		timeZone: TIME_ZONE,
+	}).formatToParts(date);
+	const weekday = parts.find((part) => part.type === "weekday")?.value;
+	const day = Number(parts.find((part) => part.type === "day")?.value);
+	return `${weekday} ${day}${getOrdinalSuffix(day)}`;
+}
+
+// Discord allows at most 25 options in a select menu.
+export function getNextDays(
+	count = 25,
+	now = new Date(),
+): { label: string; value: string }[] {
+	const parts = new Intl.DateTimeFormat("en-GB", {
+		year: "numeric",
+		month: "numeric",
+		day: "numeric",
+		timeZone: TIME_ZONE,
+	}).formatToParts(now);
+	const get = (type: string) =>
+		Number(parts.find((part) => part.type === type)?.value);
+
+	const options = [];
+
+	for (let i = 0; i < count; i++) {
+		// noon UTC is the same calendar day in London all year round
+		const date = new Date(
+			Date.UTC(get("year"), get("month") - 1, get("day") + i, 12),
+		);
+		const label = formatDay(date);
+		options.push({ label, value: label });
+	}
+
+	return options;
+}
+
+export function getDaysFromContent(content: string): Map<string, string[]> {
+	const days = new Map<string, string[]>();
+	const lines = content.split("\n");
+	for (const line of lines) {
+		const match = line.match(/^([A-Z][a-z]{2} \d{1,2}(?:st|nd|rd|th)): (.+)$/);
+		if (!match) continue;
+		const [, day, users] = match;
+		if (!day || !users) continue;
+		const userIds = Array.from(users.matchAll(/<@(\d+)>/g), (m) => m[1] ?? "");
+		days.set(day, userIds);
+	}
+	return days;
+}
+
+// Replaces the user's previous days with their new selection.
+export function setUserDays(
+	days: Map<string, string[]>,
+	userId: string,
+	selectedDays: string[],
+): Map<string, string[]> {
+	const updated = new Map<string, string[]>();
+	for (const [day, userIds] of days) {
+		updated.set(
+			day,
+			userIds.filter((id) => id !== userId),
+		);
+	}
+	for (const day of selectedDays) {
+		updated.set(day, [...(updated.get(day) ?? []), userId]);
+	}
+	return updated;
+}
+
+// One line per day that anyone has selected, in the order given by dayOrder
+// (the menu's options, which are chronological).
+export function getContentFromDays(
+	days: Map<string, string[]>,
+	dayOrder: string[],
+	channelId?: string | null,
+) {
+	const lines = Array.from(days.entries())
+		.filter(([, userIds]) => userIds.length > 0)
+		.sort(([a], [b]) => dayOrder.indexOf(a) - dayOrder.indexOf(b))
+		.map(
+			([day, userIds]) =>
+				`${day}: ${userIds.map((id) => `<@${id}>`).join(" ")}`,
+		);
+	return [getHeader(channelId), ...lines].join("\n");
 }

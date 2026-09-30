@@ -2,6 +2,8 @@
 
 Discord bot that collects availability from a role group and posts a meetup time once a channel's responder threshold is reached (configured per channel, default 5).
 
+`/avo` asks for a time today; `/avo mode:day` asks which of the next 25 days people can do and lists who picked each day (no alert).
+
 ## Install
 
 ```bash

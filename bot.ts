@@ -11,10 +11,14 @@ import type { Interaction, StringSelectMenuInteraction } from "discord.js";
 
 import {
 	formatTime,
+	getContentFromDays,
 	getContentFromPairs,
+	getDaysFromContent,
 	getLatestTime,
+	getNextDays,
 	getNextQuarterHours,
 	getPairsFromContent,
+	setUserDays,
 	shouldAlert,
 } from "./lib.ts";
 
@@ -32,6 +36,35 @@ async function sendTimeSelectMenu(interaction: ChatInputCommandInteraction) {
 		components: [row],
 		allowedMentions: { parse: ["roles"] },
 	});
+}
+
+async function sendDaySelectMenu(interaction: ChatInputCommandInteraction) {
+	const options = getNextDays();
+	const selectMenu = new StringSelectMenuBuilder()
+		.setCustomId("day_select")
+		.setPlaceholder("pick days")
+		.setMinValues(0)
+		.setMaxValues(options.length)
+		.addOptions(options);
+
+	const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+		selectMenu,
+	);
+	await interaction.reply({
+		content: getContentFromDays(new Map(), [], interaction.channelId),
+		components: [row],
+		allowedMentions: { parse: ["roles"] },
+	});
+}
+
+function getDayContent(interaction: StringSelectMenuInteraction) {
+	const days = setUserDays(
+		getDaysFromContent(interaction.message.content),
+		interaction.user.id,
+		interaction.values,
+	);
+	const dayOrder = interaction.component.options.map((option) => option.label);
+	return getContentFromDays(days, dayOrder, interaction.channelId);
 }
 
 async function getContent(interaction: StringSelectMenuInteraction) {
@@ -82,7 +115,11 @@ export function setupHandlers(client: ClientLike) {
 		try {
 			if (interaction.isChatInputCommand()) {
 				if (interaction.commandName === "avo") {
-					await sendTimeSelectMenu(interaction);
+					if (interaction.options.getString("mode") === "day") {
+						await sendDaySelectMenu(interaction);
+					} else {
+						await sendTimeSelectMenu(interaction);
+					}
 				}
 			} else if (
 				interaction.isStringSelectMenu() &&
@@ -91,6 +128,12 @@ export function setupHandlers(client: ClientLike) {
 				await interaction.deferUpdate();
 				const { originalMessage, newContent } = await getContent(interaction);
 				await originalMessage.edit({ content: newContent });
+			} else if (
+				interaction.isStringSelectMenu() &&
+				interaction.customId === "day_select"
+			) {
+				await interaction.deferUpdate();
+				await interaction.message.edit({ content: getDayContent(interaction) });
 			}
 		} catch (error) {
 			console.error("Failed to handle interaction:", error);

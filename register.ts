@@ -1,4 +1,4 @@
-import { REST, Routes } from "discord.js";
+import { ApplicationCommandOptionType, REST, Routes } from "discord.js";
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
@@ -10,6 +10,18 @@ const commands = [
 	{
 		name: "avo",
 		description: "activate avo bot!",
+		options: [
+			{
+				name: "mode",
+				description: "what to ask for (default: time)",
+				type: ApplicationCommandOptionType.String,
+				required: false,
+				choices: [
+					{ name: "time", value: "time" },
+					{ name: "day", value: "day" },
+				],
+			},
+		],
 	},
 ];
 
