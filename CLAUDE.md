@@ -12,7 +12,6 @@ Bun (not Node). Use `bun` for all installs and script execution.
 - `bot.ts` — Discord client setup and event handlers; imports from `lib.ts`.
 - `lib.test.ts` — Bun tests for the pure functions in `lib.ts`.
 - `bot.flow.test.ts` — Bun tests for the interaction flow via an injected mock client (no Discord connection needed).
-- `register.ts` — one-shot script to register slash commands with Discord.
 
 ## Testing
 
@@ -52,7 +51,7 @@ bun test
 
 ## Modes
 
-`/avo` takes an optional `mode` option (declared in `register.ts`; re-run it after changing the command definition).
+`/avo` takes an optional `mode` option. The command definition is `commands` in `bot.ts`, and the bot registers it globally with Discord every time it starts (in the ready handler), so a deploy is all that is needed after changing it. A failed registration is logged and the bot carries on.
 
 - `time` (default) — single-select menu of the next 24 quarter hours (`time_select`). Message lists one `<@user> selected: HH:MM` line per responder; alerts as described below.
 - `day` — multi-select menu of the next 25 days, today first (`day_select`), labelled like `Sat 3rd` with the month implicit. Message lists one `Sat 3rd: <@a> <@b>` line per day anyone has picked, in the menu's order. A new selection replaces that user's previous days; an empty selection removes them. Day mode never alerts.

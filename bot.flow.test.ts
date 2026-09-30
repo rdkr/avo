@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { setupHandlers } from "./bot.ts";
+import { Events } from "discord.js";
+import { commands, setupHandlers } from "./bot.ts";
 import { channelConfigs, getNextDays } from "./lib.ts";
 
 // biome-ignore lint/suspicious/noExplicitAny: loose handler type for the Discord client test double
@@ -129,6 +130,55 @@ function makeSelectInteraction(
 		deferUpdate: async () => {},
 	};
 }
+
+describe("startup", () => {
+	test("registers the avo command with its mode option when ready", async () => {
+		const client = new MockClient();
+		setupHandlers(client);
+
+		const registered: unknown[] = [];
+		await client.emit(Events.ClientReady, {
+			user: { tag: "avo#0000" },
+			application: {
+				commands: {
+					set: async (commands: unknown) => registered.push(commands),
+				},
+			},
+		});
+
+		expect(registered).toEqual([commands]);
+		expect(commands).toHaveLength(1);
+		expect(commands[0]).toMatchObject({
+			name: "avo",
+			options: [
+				{
+					name: "mode",
+					required: false,
+					choices: [
+						{ name: "time", value: "time" },
+						{ name: "day", value: "day" },
+					],
+				},
+			],
+		});
+	});
+
+	test("a failed registration does not stop the bot", async () => {
+		const client = new MockClient();
+		setupHandlers(client);
+
+		await client.emit(Events.ClientReady, {
+			user: { tag: "avo#0000" },
+			application: {
+				commands: {
+					set: async () => {
+						throw new Error("discord is down");
+					},
+				},
+			},
+		});
+	});
+});
 
 describe("bot flow", () => {
 	test("/avo in cs channel tags cs group", async () => {

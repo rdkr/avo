@@ -1,5 +1,7 @@
 import {
 	ActionRowBuilder,
+	type ApplicationCommandData,
+	ApplicationCommandOptionType,
 	type ChatInputCommandInteraction,
 	Client,
 	Events,
@@ -106,9 +108,42 @@ type ClientLike = {
 	on(event: string, listener: EventHandler): unknown;
 };
 
+type ReadyClientLike = {
+	user: { tag: string };
+	application: {
+		commands: { set(commands: ApplicationCommandData[]): Promise<unknown> };
+	};
+};
+
+export const commands: ApplicationCommandData[] = [
+	{
+		name: "avo",
+		description: "activate avo bot!",
+		options: [
+			{
+				name: "mode",
+				description: "what to ask for (default: time)",
+				type: ApplicationCommandOptionType.String,
+				required: false,
+				choices: [
+					{ name: "time", value: "time" },
+					{ name: "day", value: "day" },
+				],
+			},
+		],
+	},
+];
+
 export function setupHandlers(client: ClientLike) {
-	client.on(Events.ClientReady, (readyClient: { user: { tag: string } }) => {
+	client.on(Events.ClientReady, async (readyClient: ReadyClientLike) => {
 		console.log(`Logged in as ${readyClient.user.tag}!`);
+		// registered on every start so a deploy keeps the commands up to date
+		try {
+			await readyClient.application.commands.set(commands);
+			console.log("Registered application (/) commands.");
+		} catch (error) {
+			console.error("Failed to register commands:", error);
+		}
 	});
 
 	client.on(Events.InteractionCreate, async (interaction: Interaction) => {

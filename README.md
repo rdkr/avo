@@ -18,13 +18,7 @@ Requires `DISCORD_TOKEN` in the environment (e.g. via `.env`):
 bun run bot.ts
 ```
 
-## Register slash commands
-
-One-shot; requires `DISCORD_TOKEN` and `CLIENT_ID`:
-
-```bash
-bun run register.ts
-```
+The bot registers its slash commands with Discord each time it starts, so there is no separate registration step.
 
 ## Test
 
