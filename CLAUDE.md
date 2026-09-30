@@ -22,6 +22,16 @@ make test
 
 Builds the `dev` Docker stage (node_modules baked in) and mounts the source and test files (`lib.ts`, `bot.ts`, `lib.test.ts`, `bot.flow.test.ts`) at runtime. Rebuilding the image is only needed when `package.json` changes.
 
+Inside the dev container there is no Docker, so run the tests directly:
+
+```
+bun test
+```
+
+## Dev container
+
+`.devcontainer/Dockerfile` is separate from the root `Dockerfile` (which CI builds and publishes). It is `oven/bun` plus git, make, ssh and the GitHub CLI, runs as the `bun` user, and runs `bun install --frozen-lockfile` on creation. Claude Code's config lives in the `avo-claude` named volume so it survives rebuilds.
+
 ## Docker stages
 
 | Stage | Purpose |

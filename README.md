@@ -27,7 +27,8 @@ bun run register.ts
 ## Test
 
 ```bash
-make test
+make test   # on the host, via Docker
+bun test    # inside the dev container
 ```
 
 ## Lint / format
